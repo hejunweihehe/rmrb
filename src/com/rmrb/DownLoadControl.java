@@ -1,5 +1,6 @@
 package com.rmrb;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -18,10 +19,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfContentByte;
+import com.itextpdf.text.pdf.PdfCopy;
 import com.itextpdf.text.pdf.PdfImportedPage;
 import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.PdfSmartCopy;
 import com.itextpdf.text.pdf.PdfWriter;
 
 public class DownLoadControl {
@@ -78,7 +82,7 @@ public class DownLoadControl {
 
 		// 初始化目标文件名
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-		destFileName = "d:/" + format.format(cal.getTime()) + ".pdf";
+		destFileName = "" + format.format(cal.getTime()) + ".pdf";
 	}
 
 	// 下载并组合
@@ -92,8 +96,8 @@ public class DownLoadControl {
 			try {
 				URLConnection connection = urls.get(i).openConnection();
 				is = connection.getInputStream();
-				os = new FileOutputStream("d:/" + i + ".pdf");
-				cacheFiles.add("d:/" + i + ".pdf");
+				os = new FileOutputStream("" + i + ".pdf");
+				cacheFiles.add("" + i + ".pdf");
 				byte[] buffer = new byte[1024];
 				int flag = 0;
 				while (-1 != (flag = is.read(buffer, 0, buffer.length))) {
@@ -123,85 +127,37 @@ public class DownLoadControl {
 
 		// 组合成一个PDF
 		try {
-			List<InputStream> pdfs = new ArrayList<InputStream>();
-			for (String filePath : cacheFiles) {
-				pdfs.add(new FileInputStream(filePath));
-			}
-			System.out.println("destFileName =" + destFileName);
-			OutputStream output = new FileOutputStream(destFileName);
-			concatPDFs(pdfs, output, true);
-		} catch (FileNotFoundException e) {
+			mergeFiles(cacheFiles, destFileName);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (DocumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
 
-	private void concatPDFs(List<InputStream> streamOfPDFFiles, OutputStream outputStream, boolean paginate) {
-
-		Document document = new Document();
-		try {
-			List<InputStream> pdfs = streamOfPDFFiles;
-			List<PdfReader> readers = new ArrayList<PdfReader>();
-			int totalPages = 0;
-			Iterator<InputStream> iteratorPDFs = pdfs.iterator();
-
-			// Create Readers for the pdfs.
-			while (iteratorPDFs.hasNext()) {
-				InputStream pdf = iteratorPDFs.next();
-				PdfReader pdfReader = new PdfReader(pdf);
-				readers.add(pdfReader);
-				totalPages += pdfReader.getNumberOfPages();
-			}
-			// Create a writer for the outputstream
-			PdfWriter writer = PdfWriter.getInstance(document, outputStream);
-
-			document.open();
-			BaseFont bf = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
-			PdfContentByte cb = writer.getDirectContent(); // Holds the PDF
-			// data
-
-			PdfImportedPage page;
-			int currentPageNumber = 0;
-			int pageOfCurrentReaderPDF = 0;
-			Iterator<PdfReader> iteratorPDFReader = readers.iterator();
-
-			// Loop through the PDF files and add to the output.
-			while (iteratorPDFReader.hasNext()) {
-				PdfReader pdfReader = iteratorPDFReader.next();
-
-				// Create a new page in the target for each source page.
-				while (pageOfCurrentReaderPDF < pdfReader.getNumberOfPages()) {
-					document.newPage();
-					pageOfCurrentReaderPDF++;
-					currentPageNumber++;
-					page = writer.getImportedPage(pdfReader, pageOfCurrentReaderPDF);
-					cb.addTemplate(page, 0, 0);
-
-					// Code for pagination.
-					if (paginate) {
-						cb.beginText();
-						cb.setFontAndSize(bf, 9);
-						cb.showTextAligned(PdfContentByte.ALIGN_CENTER, "" + currentPageNumber + " of " + totalPages,
-								520, 5, 0);
-						cb.endText();
-					}
-				}
-				pageOfCurrentReaderPDF = 0;
-			}
-			outputStream.flush();
-			document.close();
-			outputStream.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if (document.isOpen())
-				document.close();
-			try {
-				if (outputStream != null)
-					outputStream.close();
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
+		// 删除缓存文件
+		File cacheFile;
+		for (String fileName : cacheFiles) {
+			cacheFile = new File(fileName);
+			if (cacheFile.exists()) {
+				cacheFile.delete();
 			}
 		}
+	}
+
+	public void mergeFiles(ArrayList<String> files, String result) throws IOException, DocumentException {
+		Document document = new Document();
+		PdfCopy copy;
+		copy = new PdfSmartCopy(document, new FileOutputStream(result));
+		document.open();
+		PdfReader[] reader = new PdfReader[files.size()];
+		for (int i = 0; i < files.size(); i++) {
+			reader[i] = new PdfReader(files.get(i));
+			copy.addDocument(reader[i]);
+			copy.freeReader(reader[i]);
+			reader[i].close();
+		}
+		document.close();
 	}
 }
