@@ -65,11 +65,10 @@ public class DownLoadControl {
 				HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 				int state = connection.getResponseCode();
 				if (state == 404) {
-					System.out.println("url size =" + urls.size());
+					System.out.println("总页数 =" + urls.size());
 					break;
 				}
 				urls.add(url);
-				System.out.println(url.toString());
 				page++;
 			}
 		} catch (MalformedURLException e) {
@@ -79,15 +78,16 @@ public class DownLoadControl {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 		// 初始化目标文件名
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-		destFileName = "" + format.format(cal.getTime()) + ".pdf";
+		destFileName = "e:/" + format.format(cal.getTime()) + ".pdf";
 	}
 
 	// 下载并组合
 	public void downLoad() {
+		System.out.println("初始化下载地址......");
 		getUrls();
+		System.out.println("开始下载......");
 		// 下载
 		cacheFiles.clear();
 		InputStream is = null;
@@ -96,8 +96,8 @@ public class DownLoadControl {
 			try {
 				URLConnection connection = urls.get(i).openConnection();
 				is = connection.getInputStream();
-				os = new FileOutputStream("" + i + ".pdf");
-				cacheFiles.add("" + i + ".pdf");
+				os = new FileOutputStream("e:/" + i + ".pdf");
+				cacheFiles.add("e:/" + i + ".pdf");
 				byte[] buffer = new byte[1024];
 				int flag = 0;
 				while (-1 != (flag = is.read(buffer, 0, buffer.length))) {
@@ -124,7 +124,7 @@ public class DownLoadControl {
 				}
 			}
 		}
-
+		System.out.println("合并页面......");
 		// 组合成一个PDF
 		try {
 			mergeFiles(cacheFiles, destFileName);
@@ -135,7 +135,7 @@ public class DownLoadControl {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		System.out.println("删除缓存文件......");
 		// 删除缓存文件
 		File cacheFile;
 		for (String fileName : cacheFiles) {
@@ -144,6 +144,7 @@ public class DownLoadControl {
 				cacheFile.delete();
 			}
 		}
+		System.out.println("下载完毕");
 	}
 
 	public void mergeFiles(ArrayList<String> files, String result) throws IOException, DocumentException {
