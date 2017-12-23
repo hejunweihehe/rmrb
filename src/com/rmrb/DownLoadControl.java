@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
@@ -63,20 +64,30 @@ public class DownLoadControl {
 						+ (page < 10 ? ("0" + page) : page) + ".pdf");
 				// 检查地址是否有效
 				HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+				// 设置超时时间
+				connection.setConnectTimeout(5000);
 				int state = connection.getResponseCode();
 				if (state == 404) {
 					System.out.println("总页数 =" + urls.size());
 					break;
 				}
+				System.out.println(url);
 				urls.add(url);
 				page++;
 			}
+		}
+		// 超时处理
+		catch (SocketTimeoutException e) {
+			e.printStackTrace();
+			System.out.println("总页数 =" + urls.size());
 		} catch (MalformedURLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.out.println("总页数 =" + urls.size());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.out.println("总页数 =" + urls.size());
 		}
 		// 初始化目标文件名
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -94,7 +105,11 @@ public class DownLoadControl {
 		OutputStream os = null;
 		for (int i = 0; i < urls.size(); i++) {
 			try {
-				URLConnection connection = urls.get(i).openConnection();
+				URL url = urls.get(i);
+				System.out.println("正在下载:" + url);
+				URLConnection connection = url.openConnection();
+				// 设置延时五秒
+				connection.setConnectTimeout(5000);
 				is = connection.getInputStream();
 				os = new FileOutputStream("e:/" + i + ".pdf");
 				cacheFiles.add("e:/" + i + ".pdf");
